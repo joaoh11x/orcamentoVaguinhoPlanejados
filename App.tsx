@@ -1,20 +1,40 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import OrcamentoForm from './src/components/OrcamentoForm';
+import OrcamentoView from './src/components/OrcamentoView';
+import Historico from './src/components/Historico';
+import { initializeDatabase } from './src/database/database';
 
-export default function App() {
+const Stack = createStackNavigator();
+
+const App = () => {
+  useEffect(() => {
+    initializeDatabase();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="OrcamentoForm">
+        <Stack.Screen 
+          name="OrcamentoForm" 
+          component={OrcamentoForm} 
+          options={{ title: 'Novo Orçamento' }} 
+        />
+        <Stack.Screen 
+          name="OrcamentoView" 
+          component={OrcamentoView} 
+          options={{ title: 'Orçamento' }} 
+        />
+        <Stack.Screen 
+          name="Historico" 
+          component={Historico} 
+          options={{ title: 'Histórico' }} 
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default App;

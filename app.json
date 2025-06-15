@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "orcamento",
-    "slug": "orcamento",
+    "name": "Orçamento VaguinhoPlanejados",
+    "slug": "orcamento-vaguinho-planejados",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,14 +16,24 @@
       "supportsTablet": true
     },
     "android": {
+      "icon": "./assets/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.gafanhotoxx.orcamentovaguinhoplanejados"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b630c4a7-82db-48ef-bb09-a1e44c6ae4f4"
+      }
     }
   }
 }
