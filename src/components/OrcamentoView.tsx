@@ -4,7 +4,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
-import { Asset } from 'expo-asset'; // Adicione esta importação
+import { Asset } from 'expo-asset';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { OrcamentoViewRouteProp } from '../types';
@@ -19,8 +19,7 @@ const OrcamentoView = () => {
 
     const generateHTML = async () => {
         try {
-            // Carregue a logo usando Asset
-            const logoAsset = Asset.fromModule(require('../../assets/images/logo.png'));
+            const logoAsset = Asset.fromModule(require('../../assets/logo.png'));
             await logoAsset.downloadAsync();
             
             const base64Logo = await FileSystem.readAsStringAsync(logoAsset.localUri!, {
