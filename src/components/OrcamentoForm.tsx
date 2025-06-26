@@ -284,7 +284,7 @@ const OrcamentoForm = () => {
 
         <TouchableOpacity
           style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Historico')}
+          onPress={() => navigation.navigate('Histórico' as never)}
         >
           <Ionicons name="time-outline" size={20} color="#3498db" />
           <Text style={styles.secondaryButtonText}>Ver Histórico</Text>

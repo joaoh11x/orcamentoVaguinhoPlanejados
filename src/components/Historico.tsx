@@ -29,7 +29,7 @@ const Historico = () => {
     if (searchText === '') {
       setFilteredOrcamentos(orcamentos);
     } else {
-      const filtered = orcamentos.filter(orcamento => 
+      const filtered = orcamentos.filter(orcamento =>
         orcamento.cliente.toLowerCase().includes(searchText.toLowerCase()) ||
         orcamento.data.includes(searchText) ||
         (orcamento.observacao && orcamento.observacao.toLowerCase().includes(searchText.toLowerCase()))
@@ -39,7 +39,7 @@ const Historico = () => {
   }, [searchText, orcamentos]);
 
   const renderItem = ({ item }: { item: Orcamento }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.item}
       onPress={() => navigation.navigate('OrcamentoView', { orcamento: item })}
     >
@@ -70,7 +70,7 @@ const Historico = () => {
           onChangeText={setSearchText}
         />
       </View>
-      
+
       {filteredOrcamentos.length > 0 ? (
         <FlatList
           data={filteredOrcamentos}
@@ -130,12 +130,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+    paddingRight: 40,
   },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 5,
+    paddingRight: 20,
   },
   itemCliente: {
     fontWeight: 'bold',
@@ -147,6 +149,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#27ae60',
+    marginRight: 10,
   },
   itemData: {
     color: '#7f8c8d',
