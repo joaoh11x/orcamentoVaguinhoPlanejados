@@ -20,7 +20,7 @@ type OrcamentoFormNavigationProp = StackNavigationProp<RootStackParamList, 'Orca
 
 const OrcamentoForm = () => {
   const navigation = useNavigation<OrcamentoFormNavigationProp>();
-  const route = useRoute<OrcamentoFormRouteProp>(); // Use OrcamentoFormRouteProp
+  const route = useRoute<OrcamentoFormRouteProp>();
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState<number | null>(null);
 
@@ -65,7 +65,8 @@ const OrcamentoForm = () => {
       const novosServicos = [...servicos];
       novosServicos.splice(index, 1);
       setServicos(novosServicos);
-      atualizarTotal();
+      // Recalcular total após remover serviço
+      setTimeout(() => atualizarTotal(), 100);
     }
   };
 
@@ -78,13 +79,15 @@ const OrcamentoForm = () => {
     setServicos(novosServicos);
 
     if (campo === 'valor') {
-      atualizarTotal();
+      // Usar setTimeout para garantir que o estado seja atualizado antes do cálculo
+      setTimeout(() => atualizarTotal(), 100);
     }
   };
 
   const atualizarTotal = () => {
     const total = servicos.reduce((sum, servico) => {
-      return sum + (parseFloat(servico.valor as string) || 0);
+      const valorNumerico = parseFloat(servico.valor as string) || 0;
+      return sum + valorNumerico;
     }, 0);
     setValorProposta(total);
   };
@@ -130,36 +133,94 @@ const OrcamentoForm = () => {
     setServicos([{ un: '', especificacoes: '', valor: '' }]);
   };
 
+  const validateForm = () => {
+    if (!data) {
+      Alert.alert('Erro', 'Por favor, selecione a data do orçamento');
+      return false;
+    }
+
+    if (!cliente.trim()) {
+      Alert.alert('Erro', 'Por favor, informe o nome do cliente');
+      return false;
+    }
+
+    if (!validade) {
+      Alert.alert('Erro', 'Por favor, selecione a data de validade');
+      return false;
+    }
+
+    // Validar se há pelo menos um serviço preenchido
+    const servicosValidos = servicos.filter(s => 
+      s.un.trim() && s.especificacoes.trim() && s.valor && parseFloat(s.valor as string) > 0
+    );
+
+    if (servicosValidos.length === 0) {
+      Alert.alert('Erro', 'Por favor, adicione pelo menos um serviço válido');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = () => {
-    if (!data || !cliente || !validade) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos obrigatórios');
+
+    if (!validateForm()) {
       return;
     }
 
+    // Filtrar apenas serviços válidos
+    const servicosValidos = servicos.filter(s => 
+      s.un.trim() && s.especificacoes.trim() && s.valor && parseFloat(s.valor as string) > 0
+    );
+
+    // Recalcular total com serviços válidos
+    const totalCalculado = servicosValidos.reduce((sum, servico) => {
+      return sum + (parseFloat(servico.valor as string) || 0);
+    }, 0);
+
     const orcamento = {
       data: formatarData(data),
-      cliente,
+      cliente: cliente.trim(),
       validade: formatarData(validade),
-      observacao,
-      valor_proposta: valorProposta,
-      servicos,
+      observacao: observacao.trim(),
+      valor_proposta: totalCalculado,
+      servicos: servicosValidos,
       dataExtenso: formatarDataExtenso(data),
     };
 
     if (isEditing && currentId) {
       updateOrcamento(currentId, orcamento, (success: boolean) => {
         if (success) {
-          navigation.navigate('OrcamentoView', { orcamento: { ...orcamento, id: currentId } });
+          Alert.alert('Sucesso', 'Orçamento atualizado com sucesso!', [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('OrcamentoView', { orcamento: { ...orcamento, id: currentId } })
+            }
+          ]);
         } else {
           Alert.alert('Erro', 'Falha ao atualizar orçamento');
         }
       });
     } else {
-      saveOrcamento(orcamento, (id: number) => {
-        navigation.navigate('OrcamentoView', { orcamento: { ...orcamento, id } });
+      saveOrcamento(orcamento, (result: number | null) => {
+        if (result && result > 0) {
+          Alert.alert('Sucesso', 'Orçamento salvo com sucesso!', [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('OrcamentoView', { orcamento: { ...orcamento, id: result } })
+            }
+          ]);
+        } else {
+          Alert.alert('Erro', 'Falha ao salvar orçamento. Tente novamente.');
+        }
       });
     }
   };
+
+  // Recalcular total sempre que servicos mudarem
+  useEffect(() => {
+    atualizarTotal();
+  }, [servicos]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
