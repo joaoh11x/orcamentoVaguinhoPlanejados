@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, Platform } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -9,6 +9,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { OrcamentoViewRouteProp } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { loadAssetAsBase64 } from '../utils/assetHelpers';
 
 type OrcamentoViewNavigationProp = StackNavigationProp<RootStackParamList, 'OrcamentoView'>;
 
@@ -17,15 +18,21 @@ const OrcamentoView = () => {
     const navigation = useNavigation<OrcamentoViewNavigationProp>();
     const { orcamento } = route.params;
 
+    // Função para carregar o logo de forma mais robusta
+    const loadLogoAsBase64 = async (): Promise<string | null> => {
+        try {
+            const base64 = await loadAssetAsBase64(require('../../assets/logo.png'));
+            return base64 ? `data:image/png;base64,${base64}` : null;
+        } catch (error) {
+            console.error('Erro ao carregar logo:', error);
+            return null;
+        }
+    };
+
     const generateHTML = async () => {
         try {
-            const logoAsset = Asset.fromModule(require('../../assets/logo.png'));
-            await logoAsset.downloadAsync();
+            const logoSrc = await loadLogoAsBase64();
             
-            const base64Logo = await FileSystem.readAsStringAsync(logoAsset.localUri!, {
-                encoding: FileSystem.EncodingType.Base64,
-            });
-            const logoSrc = `data:image/png;base64,${base64Logo}`;
             return `
             <!DOCTYPE html>
             <html lang="pt-br">
@@ -114,7 +121,7 @@ const OrcamentoView = () => {
                 </style>
             </head>
             <body>
-                <img src="${logoSrc}" alt="Logo da Empresa" style="height: 100px; width: 200px">
+                ${logoSrc ? `<img src="${logoSrc}" alt="Logo da Empresa" style="height: 100px; width: 200px; display: block; margin: 0 auto;">` : '<div class="logo-text" style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #2c3e50;">VAGUINHO PLANEJADOS</div>'}
                 <h1 class="orcamento">ORÇAMENTO</h1>
                 <table class="tabela-info">
                     <tr>
@@ -183,7 +190,7 @@ const OrcamentoView = () => {
             </html>
         `;
         } catch (error) {
-            console.error('Erro ao carregar logo:', error);
+            console.error('Erro ao gerar HTML:', error);
             // Retorna HTML sem logo se houver erro
             return generateHTMLWithoutLogo();
         }
@@ -357,16 +364,37 @@ const OrcamentoView = () => {
 
     const shareAsPDF = async () => {
         try {
+            console.log('Iniciando geração de PDF...');
             const html = await generateHTML();
-            const { uri } = await Print.printToFileAsync({ html });
-
-            await Sharing.shareAsync(uri, {
-                mimeType: 'application/pdf',
-                dialogTitle: 'Compartilhar Orçamento',
-                UTI: 'com.adobe.pdf'
+            console.log('HTML gerado, criando PDF...');
+            
+            const { uri } = await Print.printToFileAsync({ 
+                html,
+                base64: false
             });
+            
+            console.log('PDF criado em:', uri);
+            
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(uri, {
+                    mimeType: 'application/pdf',
+                    dialogTitle: 'Compartilhar Orçamento',
+                    UTI: 'com.adobe.pdf'
+                });
+            } else {
+                console.log('Sharing não disponível');
+                // Fallback para Android
+                if (Platform.OS === 'android') {
+                    await Share.share({
+                        url: uri,
+                        title: 'Orçamento Vaguinho Planejados'
+                    });
+                }
+            }
         } catch (error) {
             console.error('Error sharing PDF:', error);
+            // Em caso de erro, tentar compartilhar como texto
+            await shareAsText();
         }
     };
 
@@ -491,149 +519,196 @@ const OrcamentoView = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#f5f7fa',
     },
     scrollContent: {
-        paddingBottom: 30,
+        paddingBottom: 40,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 15,
+        padding: 20,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    backButton: {
-        marginRight: 15,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#2c3e50',
-    },
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        margin: 15,
-        padding: 20,
+        borderBottomColor: '#e8ecf4',
         elevation: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
-        shadowRadius: 3,
+        shadowRadius: 4,
+    },
+    backButton: {
+        marginRight: 18,
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: '#f8fbff',
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#2c3e50',
+        letterSpacing: 0.5,
+    },
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        margin: 20,
+        padding: 25,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        borderWidth: 1,
+        borderColor: '#e8ecf4',
     },
     logoContainer: {
         alignItems: 'center',
-        marginBottom: 15,
+        marginBottom: 20,
+        padding: 15,
+        backgroundColor: '#f8fbff',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e1ecf4',
     },
     logoText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#2c3e50',
-    },
-    titulo: {
         fontSize: 20,
         fontWeight: 'bold',
+        color: '#3498db',
+        letterSpacing: 1,
+    },
+    titulo: {
+        fontSize: 24,
+        fontWeight: 'bold',
         textAlign: 'center',
-        marginBottom: 20,
+        marginBottom: 25,
         color: '#2c3e50',
+        letterSpacing: 1,
     },
     infoContainer: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 5,
-        padding: 10,
-        marginBottom: 20,
+        borderWidth: 2,
+        borderColor: '#e8ecf4',
+        borderRadius: 12,
+        padding: 18,
+        marginBottom: 25,
+        backgroundColor: '#fafbfc',
     },
     infoText: {
-        marginBottom: 8,
-        fontSize: 14,
+        marginBottom: 12,
+        fontSize: 15,
+        lineHeight: 22,
     },
     infoLabel: {
         fontWeight: 'bold',
         color: '#2c3e50',
+        letterSpacing: 0.3,
     },
     sectionTitle: {
         fontWeight: 'bold',
         textAlign: 'center',
-        fontSize: 16,
-        marginBottom: 10,
+        fontSize: 18,
+        marginBottom: 15,
         color: '#2c3e50',
+        letterSpacing: 0.5,
     },
     servicosContainer: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 5,
-        marginBottom: 20,
+        borderWidth: 2,
+        borderColor: '#e8ecf4',
+        borderRadius: 12,
+        marginBottom: 25,
+        overflow: 'hidden',
     },
     servicosHeader: {
         flexDirection: 'row',
-        backgroundColor: '#f8f9fa',
-        borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
+        backgroundColor: '#3498db',
+        paddingVertical: 15,
     },
     servicosRow: {
         flexDirection: 'row',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: '#f0f4f8',
+        backgroundColor: '#fafbfc',
     },
     servicosCell: {
-        padding: 10,
-        fontSize: 14,
+        padding: 15,
+        fontSize: 15,
+        fontWeight: '500',
     },
     headerCell: {
         fontWeight: 'bold',
-        color: '#2c3e50',
+        color: '#fff',
+        fontSize: 16,
+        letterSpacing: 0.3,
     },
     totalRow: {
         flexDirection: 'row',
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#e8f4fc',
+        paddingVertical: 15,
     },
     totalLabel: {
         fontWeight: 'bold',
         color: '#2c3e50',
+        fontSize: 16,
+        letterSpacing: 0.5,
     },
     propostaContainer: {
-        marginBottom: 20,
+        marginBottom: 25,
+        padding: 18,
+        backgroundColor: '#f8fafb',
+        borderRadius: 12,
+        borderLeftWidth: 4,
+        borderLeftColor: '#3498db',
     },
     propostaText: {
-        marginBottom: 8,
-        fontSize: 14,
+        marginBottom: 12,
+        fontSize: 15,
+        lineHeight: 22,
     },
     propostaLabel: {
         fontWeight: 'bold',
         color: '#2c3e50',
+        letterSpacing: 0.3,
     },
     dataContainer: {
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 25,
+        padding: 15,
+        backgroundColor: '#f8fbff',
+        borderRadius: 12,
     },
     dataText: {
-        fontSize: 14,
-        color: '#555',
+        fontSize: 16,
+        color: '#5a6c7d',
+        fontWeight: '600',
+        letterSpacing: 0.3,
     },
     divider: {
-        width: 150,
-        height: 1,
-        backgroundColor: '#ddd',
-        marginTop: 10,
+        width: 180,
+        height: 2,
+        backgroundColor: '#3498db',
+        marginTop: 15,
+        borderRadius: 1,
     },
     actionsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: 15,
-        marginTop: 10,
+        paddingHorizontal: 20,
+        marginTop: 15,
+        gap: 12,
     },
     actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 15,
-        borderRadius: 8,
+        paddingVertical: 16,
+        paddingHorizontal: 18,
+        borderRadius: 16,
         flex: 1,
-        marginHorizontal: 5,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
     },
     editButton: {
         backgroundColor: '#f39c12',
@@ -647,7 +722,9 @@ const styles = StyleSheet.create({
     actionButtonText: {
         color: '#fff',
         fontWeight: 'bold',
-        marginLeft: 8,
+        marginLeft: 10,
+        fontSize: 15,
+        letterSpacing: 0.3,
     },
 });
 

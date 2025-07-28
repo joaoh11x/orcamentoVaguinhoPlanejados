@@ -20,7 +20,7 @@ function HomeStack() {
       <Stack.Screen 
         name="OrcamentoForm" 
         component={OrcamentoForm} 
-        options={{ title: 'Novo Orçamento' }} 
+        options={{ title: 'Vaguinho Planejados' }} 
       />
       <Stack.Screen 
         name="OrcamentoView" 
@@ -43,6 +43,11 @@ function HistoricoStack() {
         name="OrcamentoView" 
         component={OrcamentoView} 
         options={{ title: 'Orçamento' }} 
+      />
+      <Stack.Screen 
+        name="OrcamentoForm" 
+        component={OrcamentoForm} 
+        options={{ title: 'Editar Orçamento' }} 
       />
     </Stack.Navigator>
   );

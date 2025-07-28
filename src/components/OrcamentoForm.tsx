@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { saveOrcamento, updateOrcamento, getOrcamentoById, Orcamento, Servico } from '../database/database';
@@ -15,6 +16,10 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, OrcamentoFormRouteProp } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import MoneyInput from './MoneyInput';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 type OrcamentoFormNavigationProp = StackNavigationProp<RootStackParamList, 'OrcamentoForm'>;
 
@@ -31,7 +36,7 @@ const OrcamentoForm = () => {
   const [cliente, setCliente] = useState('');
   const [observacao, setObservacao] = useState('');
   const [valorProposta, setValorProposta] = useState(0);
-  const [servicos, setServicos] = useState<Servico[]>([{ un: '', especificacoes: '', valor: '' }]);
+  const [servicos, setServicos] = useState<Servico[]>([{ un: '', especificacoes: '', valor: 0 }]);
 
   // Access route params safely
   const { orcamentoId } = route.params || {};
@@ -57,7 +62,7 @@ const OrcamentoForm = () => {
   }, [orcamentoId, navigation]);
 
   const adicionarServico = () => {
-    setServicos([...servicos, { un: '', especificacoes: '', valor: '' }]);
+    setServicos([...servicos, { un: '', especificacoes: '', valor: 0 }]);
   };
 
   const removerServico = (index: number) => {
@@ -70,11 +75,11 @@ const OrcamentoForm = () => {
     }
   };
 
-  const atualizarServico = (index: number, campo: keyof Servico, valor: string) => {
+  const atualizarServico = (index: number, campo: keyof Servico, valor: string | number) => {
     const novosServicos = [...servicos];
     novosServicos[index] = {
       ...novosServicos[index],
-      [campo]: campo === 'valor' ? valor.replace(',', '.') : valor,
+      [campo]: valor,
     };
     setServicos(novosServicos);
 
@@ -86,7 +91,7 @@ const OrcamentoForm = () => {
 
   const atualizarTotal = () => {
     const total = servicos.reduce((sum, servico) => {
-      const valorNumerico = parseFloat(servico.valor as string) || 0;
+      const valorNumerico = typeof servico.valor === 'number' ? servico.valor : parseFloat(servico.valor as string) || 0;
       return sum + valorNumerico;
     }, 0);
     setValorProposta(total);
@@ -130,7 +135,7 @@ const OrcamentoForm = () => {
     setValidade(null);
     setObservacao('');
     setValorProposta(0);
-    setServicos([{ un: '', especificacoes: '', valor: '' }]);
+    setServicos([{ un: '', especificacoes: '', valor: 0 }]);
   };
 
   const validateForm = () => {
@@ -150,9 +155,10 @@ const OrcamentoForm = () => {
     }
 
     // Validar se há pelo menos um serviço preenchido
-    const servicosValidos = servicos.filter(s => 
-      s.un.trim() && s.especificacoes.trim() && s.valor && parseFloat(s.valor as string) > 0
-    );
+    const servicosValidos = servicos.filter(s => {
+      const valorNumerico = typeof s.valor === 'number' ? s.valor : parseFloat(s.valor as string) || 0;
+      return s.un.trim() && s.especificacoes.trim() && valorNumerico > 0;
+    });
 
     if (servicosValidos.length === 0) {
       Alert.alert('Erro', 'Por favor, adicione pelo menos um serviço válido');
@@ -169,13 +175,15 @@ const OrcamentoForm = () => {
     }
 
     // Filtrar apenas serviços válidos
-    const servicosValidos = servicos.filter(s => 
-      s.un.trim() && s.especificacoes.trim() && s.valor && parseFloat(s.valor as string) > 0
-    );
+    const servicosValidos = servicos.filter(s => {
+      const valorNumerico = typeof s.valor === 'number' ? s.valor : parseFloat(s.valor as string) || 0;
+      return s.un.trim() && s.especificacoes.trim() && valorNumerico > 0;
+    });
 
     // Recalcular total com serviços válidos
     const totalCalculado = servicosValidos.reduce((sum, servico) => {
-      return sum + (parseFloat(servico.valor as string) || 0);
+      const valorNumerico = typeof servico.valor === 'number' ? servico.valor : parseFloat(servico.valor as string) || 0;
+      return sum + valorNumerico;
     }, 0);
 
     const orcamento = {
@@ -308,14 +316,16 @@ const OrcamentoForm = () => {
             />
 
             <Text style={styles.label}>Valor:</Text>
-            <TextInput
-              style={styles.input}
-              value={servico.valor.toString()}
-              onChangeText={(text) => atualizarServico(index, 'valor', text)}
-              placeholder="0,00"
-              placeholderTextColor="#999"
-              keyboardType="numeric"
-            />
+            <View style={styles.moneyInputContainer}>
+              <Text style={styles.currencySymbol}>R$</Text>
+              <MoneyInput
+                style={styles.moneyInput}
+                value={typeof servico.valor === 'number' ? servico.valor : parseFloat(servico.valor as string) || 0}
+                onValueChange={(valor) => atualizarServico(index, 'valor', valor)}
+                placeholder="0,00"
+                placeholderTextColor="#999"
+              />
+            </View>
           </View>
         ))}
 
@@ -325,11 +335,16 @@ const OrcamentoForm = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.card, styles.totalCard]}>
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.card, styles.totalCard]}
+      >
         <Text style={styles.totalText}>
           TOTAL GERAL: R$ {valorProposta.toFixed(2).replace('.', ',')}
         </Text>
-      </View>
+      </LinearGradient>
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
@@ -343,13 +358,6 @@ const OrcamentoForm = () => {
           <Text style={styles.secondaryButtonText}>Limpar Campos</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Histórico' as never)}
-        >
-          <Ionicons name="time-outline" size={20} color="#3498db" />
-          <Text style={styles.secondaryButtonText}>Ver Histórico</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -358,126 +366,194 @@ const OrcamentoForm = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f5f7fa',
   },
   scrollContent: {
-    padding: 15,
-    paddingBottom: 30,
+    padding: 20,
+    paddingBottom: 40,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#2c3e50',
-    marginTop: 20,
-    marginBottom: 10,
+    marginTop: 25,
+    marginBottom: 15,
     marginLeft: 5,
+    letterSpacing: 0.5,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    elevation: 2,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e8ecf4',
   },
   label: {
-    color: '#7f8c8d',
-    marginBottom: 5,
-    fontSize: 14,
+    color: '#5a6c7d',
+    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   input: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: '#f8fafb',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 18,
+    borderWidth: 2,
+    borderColor: '#e1e8ed',
     fontSize: 16,
-    justifyContent: 'center',
+    color: '#2c3e50',
+    fontWeight: '500',
+  },
+  inputFocused: {
+    borderColor: '#3498db',
+    backgroundColor: '#fff',
   },
   textArea: {
-    height: 100,
+    height: 120,
     textAlignVertical: 'top',
+    paddingTop: 16,
   },
   servicoContainer: {
-    marginBottom: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    marginBottom: 25,
+    paddingBottom: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: '#f0f4f8',
+    backgroundColor: '#fafbfc',
+    borderRadius: 12,
+    padding: 16,
   },
   servicoHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e8ecf4',
   },
   servicoTitle: {
     fontWeight: 'bold',
     color: '#2c3e50',
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
   removeButton: {
-    padding: 5,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#fee',
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
     borderColor: '#3498db',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f8fbff',
+    marginTop: 10,
   },
   addButtonText: {
     color: '#3498db',
     marginLeft: 10,
     fontWeight: 'bold',
+    fontSize: 16,
+  },
+  moneyInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafb',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e1e8ed',
+    marginBottom: 18,
+    paddingLeft: 16,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#27ae60',
+    marginRight: 8,
+  },
+  moneyInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+    color: '#2c3e50',
+    fontWeight: '600',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   totalCard: {
-    backgroundColor: '#e8f4fc',
-    borderColor: '#3498db',
-    borderWidth: 1,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 25,
+    elevation: 8,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
   totalText: {
     fontWeight: 'bold',
-    fontSize: 18,
-    color: '#2c3e50',
+    fontSize: 22,
+    color: '#fff',
     textAlign: 'center',
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   buttonContainer: {
-    marginTop: 10,
+    marginTop: 20,
+    gap: 12,
   },
   primaryButton: {
     backgroundColor: '#3498db',
-    borderRadius: 8,
-    padding: 15,
+    borderRadius: 16,
+    padding: 18,
     alignItems: 'center',
-    marginBottom: 10,
+    elevation: 4,
+    shadowColor: '#3498db',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   primaryButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
   secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 15,
-    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
     borderColor: '#3498db',
-    marginBottom: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   secondaryButtonText: {
     color: '#3498db',
     fontWeight: 'bold',
     fontSize: 16,
     marginLeft: 10,
+    letterSpacing: 0.3,
   },
 });
 

@@ -67,7 +67,7 @@ export const initializeDatabase = () => {
 
 export const saveOrcamento = (
   orcamento: Omit<Orcamento, 'id' | 'created_at'>,
-  callback: (id: number) => void
+  callback: (id: number | null) => void
 ) => {
   const { data, cliente, validade, observacao, valor_proposta, servicos, dataExtenso } = orcamento;
 
@@ -86,9 +86,17 @@ export const saveOrcamento = (
         dataExtenso || '',
       ]
     );
-    callback(result.lastInsertRowId);
+    
+    const insertId = result.lastInsertRowId;
+    if (insertId && insertId > 0) {
+      callback(insertId);
+    } else {
+      console.error('Erro: ID não retornado após inserção');
+      callback(null);
+    }
   } catch (error) {
     console.error('Erro ao salvar orçamento', error);
+    callback(null);
   }
 };
 
