@@ -17,7 +17,6 @@ export type RootTabParamList = {
   Histórico: undefined;
 };
 
-// Adicione esta definição para os parâmetros de navegação aninhada
 export type NestedNavigatorParams = {
   HistoricoStack: { screen: keyof RootStackParamList };
 };
